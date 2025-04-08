@@ -216,65 +216,54 @@ void *delete_element(chained_list_t *list,chained_list_t *element) {
  * @param a
  * @param b
  */
-void swap_element(chained_list_t *b, chained_list_t *c) {
-    chained_list_t *tmp_prev_b = NULL,*tmp_prev_c = NULL,*tmp_next_b = NULL,*tmp_next_c = NULL;
-    chained_list_t *a = NULL,*d = NULL;
-    tmp_next_b = b->next;
-    tmp_next_c = c->next;
-    tmp_prev_b = b->prev;
-    tmp_prev_c = c->prev;
+void swap_element(chained_list_t *a, chained_list_t *b) {
+    chained_list_t *tmp_prev_a = a->prev;
+    chained_list_t *tmp_next_a = a->next;
+    chained_list_t *tmp_prev_b = b->prev;
+    chained_list_t *tmp_next_b = b->next;
 
-    //printf("Swap info b[%x|%x|%x] c[%x|%x|%x] \n",b->prev,b,b->next,c->prev,c,c->next);
+    //printf("Swap info b[%x|%x|%x] c[%x|%x|%x] \n",a->prev,b,a->next,b->prev,c,b->next);
     // Si contigu
-    if(tmp_next_b == c || tmp_prev_b == c) {
-        if(tmp_next_b == c) {
-            if(b->prev != NULL) {
-                a = b->prev;
-                a->next = c;
+    if(tmp_next_a == b || tmp_prev_a == b) {
+        if(tmp_next_a == b) {
+            if(a->prev != NULL) {
+                a->prev->next = b;
             }
-            if(c->next != NULL) {
-                d = c->next;
-                d->prev = b;
+            if(b->next != NULL) {
+                b->next->prev = a;
             }
-            b->next = tmp_next_c;
-            b->prev = c;
-            c->next = b;
-            c->prev = tmp_prev_b;
+            a->next = tmp_next_b;
+            a->prev = b;
+            b->next = a;
+            b->prev = tmp_prev_a;
         } else {
-            if (c->prev != NULL) {
-                a = c->prev;
-                a->next = b;
+            if (b->prev != NULL) {
+                b->prev->next = a;
             }
-            if (b->next != NULL) {
-                d = b->next;
-                d->prev = c;
+            if (a->next != NULL) {
+                a->next->prev = b;
             }
-            c->next = tmp_next_b;
-            c->prev = b;
-            b->next = c;
-            b->prev = tmp_prev_c;
+            b->next = tmp_next_a;
+            b->prev = a;
+            a->next = b;
+            a->prev = tmp_prev_b;
         }
     } else {
-        chained_list_t *w,*x,*y,*z;
+        if(a->prev != NULL) {
+            a->prev->next = b;
+        }
         if(b->prev != NULL) {
-            w = b->prev;
-            w->next = c;
+            b->prev->next = a;
         }
-        if(c->prev != NULL) {
-            x = c->prev;
-            x->next = b;
+        if(a->next != NULL) {
+            a->next->prev = b;
+        }if(b->next != NULL) {
+            b->next->prev = a;
         }
-        if(b->next != NULL) {
-            y = b->next;
-            y->prev = c;
-        }if(c->next != NULL) {
-            z = c->next;
-            z->prev = b;
-        }
-        b->next = tmp_next_c;
-        b->prev = tmp_prev_c;
-        c->next = tmp_next_b;
-        c->prev = tmp_prev_b;
+        a->next = tmp_next_b;
+        a->prev = tmp_prev_b;
+        b->next = tmp_next_a;
+        b->prev = tmp_prev_a;
     }
 }
 
@@ -310,4 +299,19 @@ void sort(chained_list_t *list) {
     }
 }
 
+/**
+ * @brief
+ * @param list
+ */
+/*void sort2(chained_list_t *list) {
+    bool swap = false;
+    chained_list_t *pSave;
+    uint8_t value;
+    chained_list_t *p = get_first_element(list);
+    get_size_list(list)
+
+    if(p != NULL && p->next != NULL) {
+        if(p->x > p->next->x)
+    }
+}*/
 
