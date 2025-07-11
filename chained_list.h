@@ -49,7 +49,8 @@ err_t list_pop(list_handler_t *listHandler, void *content);
 err_t list_insert_element(list_handler_t *listHandler,bool before,chained_list_t *place, void *content);
 chained_list_t *list_get_first_element(list_handler_t *listHandler);
 chained_list_t *list_get_last_element(list_handler_t *listHandler);
+chained_list_t *list_get_element_by_index(list_handler_t *listHandler, uint16_t index);
 void list_delete_element(list_handler_t *listHandler,chained_list_t *element);
-err_t list_swap_element(chained_list_t *b, chained_list_t *c);
+err_t list_swap_element(list_handler_t *listHandler, chained_list_t *b, chained_list_t *c);
 
 #endif //CHIANED_LIST_CHAINED_LIST_H

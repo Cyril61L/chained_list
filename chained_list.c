@@ -11,26 +11,11 @@
 #include <memory.h>
 #include <stdbool.h>
 #include <malloc.h>
-#include "stdio.h"
 #include "stdint.h"
 
 
 
 
-err_t search_element(list_handler_t *listHandler, chained_list_t *searchedElement, bool *result);
-
-
-err_t list_init(list_handler_t *listHandler, const char *name, size_t len);
-uint16_t list_get_size(list_handler_t *listHandler);
-
-err_t list_add(list_handler_t *listHandler, void *content);
-err_t list_pop(list_handler_t *listHandler, void *content);
-
-err_t list_insert_element(list_handler_t *listHandler,bool before,chained_list_t *place, void *content);
-chained_list_t *list_get_first_element(list_handler_t *listHandler);
-chained_list_t *list_get_last_element(list_handler_t *listHandler);
-void list_delete_element(list_handler_t *listHandler,chained_list_t *element);
-err_t list_swap_element(chained_list_t *b, chained_list_t *c);
 
 /**
  * @brief
@@ -284,7 +269,11 @@ void list_delete_element(list_handler_t *listHandler,chained_list_t *element) {
  * @param a
  * @param b
  */
-err_t list_swap_element(chained_list_t *a, chained_list_t *b) {
+err_t list_swap_element(list_handler_t *listHandler,chained_list_t *a, chained_list_t *b) {
+    if(!a || !b || !listHandler) {
+        return ERR_PARAM;
+    }
+
     chained_list_t *tmp_prev_a = a->prev;
     chained_list_t *tmp_next_a = a->next;
     chained_list_t *tmp_prev_b = b->prev;
@@ -332,9 +321,44 @@ err_t list_swap_element(chained_list_t *a, chained_list_t *b) {
         a->prev = tmp_prev_b;
         b->next = tmp_next_a;
         b->prev = tmp_prev_a;
+        // On replace head et tail
+        if(a->next == NULL) {
+            listHandler->tail = a;
+        }
+        if(b->next == NULL) {
+            listHandler->tail = b;
+        }
+        if(a->prev == NULL) {
+            listHandler->head = a;
+        }
+        if(b->prev == NULL) {
+            listHandler->head = b;
+        }
     }
     return ERR_OK;
 }
+
+
+/**
+ * @brief Count from head to tail and return the element index.
+ * @param listHandler
+ * @param index
+ * @return
+ */
+chained_list_t *list_get_element_by_index(list_handler_t *listHandler, uint16_t index) {
+    if(!listHandler || !listHandler->head || index > listHandler->listLength) {
+        return NULL;
+    } else {
+        chained_list_t *p = listHandler->head;
+        uint8_t cnt = 0;
+        while(p->next != NULL && cnt < index) {
+            p = p->next;
+            cnt++;
+        }
+        return p;
+    }
+}
+
 
 /**
  * @brief

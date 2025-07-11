@@ -44,23 +44,30 @@ void insert_first(msg_t *msg) {
 int main(void) {
     printf("Exemple d'utilisation de liste chainée en fifo\n");
 
-    msg_t msgTab[4];
-
-    create_msg("Coucou msg 1",1,&msgTab[0]);
-    create_msg("Coucou msg 2",2,&msgTab[1]);
-    create_msg("Coucou msg 3",3,&msgTab[2]);
-    create_msg("Coucou msg 4",4,&msgTab[3]);
+    msg_t msgTab[50];
 
     if(list_init(&myFifo,"Mylist", sizeof(msg_t))) {
         printf("Error init list\n");
     }
 
+    for(uint8_t i=0;i<50;i++) {
+        char buffer[32];
+        sprintf(buffer,"Coucou msg %u", i);
+        create_msg(buffer, i, &msgTab[i]);
+    }
+
     // Ajout message dans liste chainee en tete pour fifo
-    for(uint8_t i=0;i<105;i++) {
-        insert_first(&msgTab[i%2]);
+    for(uint8_t i=0;i<50;i++) {
+        insert_first(&msgTab[i]);
     }
 
     printf("len %u\n", list_get_size(&myFifo));
+
+    list_swap_element(&myFifo,list_get_first_element(&myFifo)->next, list_get_first_element(&myFifo)->next->next->next);
+
+    chained_list_t *element = list_get_element_by_index(&myFifo,25);
+    msg_t *msg25 = element->content;
+    printf("ele 25 %s %u\n",msg25->text,msg25->cmd);
 
     // Depiler la liste en mode
     for(uint8_t i=0;i<4;i++) {
@@ -71,8 +78,6 @@ int main(void) {
             printf("Get %s : %u\n",get.text,get.cmd);
         }
     }
-
-
 
     return 0;
 }
