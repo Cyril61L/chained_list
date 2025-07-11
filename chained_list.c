@@ -107,7 +107,6 @@ err_t list_add(list_handler_t *listHandler, void *content) {
             }
         } else {
             chained_list_t *pLast = list_get_last_element(listHandler);
-            //printf("Ajout élement %u\n",value);
             if(pLast != NULL) {
                 void *p = malloc(listHandler->contentLen);
                 if(p != NULL) {
@@ -140,14 +139,16 @@ err_t list_pop(list_handler_t *listHandler, void *content) {
 
     chained_list_t *last = list_get_last_element(listHandler);
     if(last != NULL) {
-        //printf("Delete\n");
         if(last->content != NULL) {
             memcpy(content,last->content,listHandler->contentLen);
             free(last->content);
         }
         if(last->prev != NULL) {
-            p = last->prev;
-            p->next = NULL;
+            last->prev->next = NULL;
+            listHandler->list = last->prev;
+        } else {
+            // On supprimait le seul élément
+            listHandler->list = NULL;
         }
         free(last);
         return ERR_OK;
@@ -161,7 +162,7 @@ err_t list_pop(list_handler_t *listHandler, void *content) {
  * @param list
  * @return
  */
-uint16_t list_get_size_list(list_handler_t *listHandler) {
+uint16_t list_get_size(list_handler_t *listHandler) {
     uint16_t n = 0;
     chained_list_t *p = list_get_first_element(listHandler);
     if(p != NULL) {
@@ -183,7 +184,7 @@ uint16_t list_get_size_list(list_handler_t *listHandler) {
  * @return
  */
 err_t list_insert_element(list_handler_t *listHandler,bool before,chained_list_t *place, void *content) {
-    if(listHandler->list != NULL && place != NULL) {
+    if(listHandler != NULL && place != NULL) {
         chained_list_t *p = malloc(sizeof(chained_list_t));
         if(p != NULL) {
             if(before) {

@@ -85,7 +85,7 @@ void create_msg(const char*text, uint8_t cmd, msg_t *msg) {
 }
 
 int main(void) {
-    printf("Test chained list\n");
+    printf("Exemple d'utilisation de liste chainée en lifo\n");
     msg_t msgTab[4];
 
     create_msg("Coucou msg 1",1,&msgTab[0]);
@@ -105,6 +105,7 @@ int main(void) {
             printf("Add msg %u to list\n",i);
         }
     }
+
 
     // Depiler la liste en mode last in first out
     for(uint8_t i=0;i<4;i++) {
