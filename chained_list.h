@@ -24,10 +24,13 @@ chained_list_t *get_last_element(chained_list_t *list);
 chained_list_t *add(chained_list_t **list, uint8_t value);
 void pop(chained_list_t *list, uint8_t *value);
 void show_list(chained_list_t *list);
-        uint8_t get_size_list(chained_list_t *list);
-        chained_list_t *insert_element(chained_list_t *list,bool before,chained_list_t *place, uint8_t value);
-        void *delete_element(chained_list_t *list,chained_list_t *element);
+uint16_t get_size_list(chained_list_t *list);
+chained_list_t *insert_element(chained_list_t *list,bool before,chained_list_t *place, uint8_t value);
+void delete_element(chained_list_t *list,chained_list_t *element);
 void swap_element(chained_list_t *b, chained_list_t *c);
+chained_list_t *get_higher_element(chained_list_t *list);
 void sort(chained_list_t *list);
+void sort2(chained_list_t *list);
+void mergeSort(chained_list_t ** headRef);
 
 #endif //CHIANED_LIST_CHAINED_LIST_H

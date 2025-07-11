@@ -10,9 +10,6 @@
 
 #include <memory.h>
 #include <stdbool.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netdb.h>
 #include <malloc.h>
 #include "stdio.h"
 #include "stdint.h"
@@ -80,11 +77,12 @@ chained_list_t *add(chained_list_t **list, uint8_t value) {
             return newElement;
         } else {
             chained_list_t *p = get_last_element(*list);
-            printf("Ajout élement %u\n",value);
+            //printf("Ajout élement %u\n",value);
             if(p != NULL) {
                 newElement->x = value;
                 p->next = newElement;
                 newElement->prev = p;
+                newElement->next = NULL;
                 return newElement;
             }
         }
@@ -134,8 +132,8 @@ void show_list(chained_list_t *list) {
  * @param list
  * @return
  */
-uint8_t get_size_list(chained_list_t *list) {
-    uint8_t n = 0;
+uint16_t get_size_list(chained_list_t *list) {
+    uint16_t n = 0;
     chained_list_t *p = get_first_element(list);
     if(p != NULL) {
         n = 1;
@@ -189,7 +187,7 @@ chained_list_t *insert_element(chained_list_t *list,bool before,chained_list_t *
  * @param element
  * @return
  */
-void *delete_element(chained_list_t *list,chained_list_t *element) {
+void delete_element(chained_list_t *list,chained_list_t *element) {
     if(list != NULL && element != NULL) {
         chained_list_t *prev = element->prev;
         chained_list_t *next = element->next;
@@ -278,13 +276,13 @@ void sort(chained_list_t *list) {
     chained_list_t *p = get_first_element(list);
     if(p != NULL && p->next != NULL) {
         while (p->next != NULL) {
-            printf("Place : %u\n",p->x);
+            //printf("Place : %u\n",p->x);
             // Step 1 :
             next = p->next;
             while(p->x > next->x) {
                 swap = true;
                 swap_element(p,next);
-                show_list(list);
+                //show_list(list);
                 next = p->next;
                 if(next == NULL)
                     break;
@@ -303,15 +301,101 @@ void sort(chained_list_t *list) {
  * @brief
  * @param list
  */
-/*void sort2(chained_list_t *list) {
-    bool swap = false;
-    chained_list_t *pSave;
-    uint8_t value;
-    chained_list_t *p = get_first_element(list);
-    get_size_list(list)
-
-    if(p != NULL && p->next != NULL) {
-        if(p->x > p->next->x)
+void sort2(chained_list_t *list) {
+    chained_list_t *higher,*tmp = NULL;
+    uint16_t len = get_size_list(list);
+    for(uint16_t i=0; i<len-1;i++) {
+        // Recherche l'element avec la plus grande valeur
+        // [15]---[2]---[8]---[12] => [15]
+        higher = get_higher_element(list);
+        // Place le plus haut element trouvé en dernier
+        // [12]---[2]---[8]---[15]
+        swap_element(higher, get_last_element(list));
+        // Replace le pointeur de list sur le premier element
+        list = get_first_element(list);
+        // On décroche le dernier element pour ne pas le compter dans la prochaine recherche de la plus haute valeur
+        // [12]---[2]---[8]-x-[15]
+        higher->prev->next = NULL;
+        if(tmp != NULL)
+            // On raccroche la suite à partir du second tour
+            // [8]---[2]-x-[12]-x-[15] => [8]---[2]-x-[12]---[15]
+            higher->next = tmp;
+        tmp = higher;
+        //show_list(list);
     }
-}*/
+    chained_list_t *first = get_first_element(list);
+    // On raccroche le reste
+    // [2]-x-[8]---[12]---[15] => [2]---[8]---[12]---[15]
+    first->next = higher;
+}
+
+
+void split(chained_list_t * source, chained_list_t** front, chained_list_t** back) {
+    chained_list_t* slow = source;
+    chained_list_t* fast = source->next;
+
+    while (fast) {
+        fast = fast->next;
+        if (fast) {
+            slow = slow->next;
+            fast = fast->next;
+        }
+    }
+
+    *front = source;
+    *back = slow->next;
+    slow->next = NULL;
+}
+
+
+chained_list_t* fusion(chained_list_t* a, chained_list_t* b) {
+    if (!a) return b;
+    if (!b) return a;
+
+    chained_list_t* result = NULL;
+    if (a->x <= b->x) {
+        result = a;
+        result->next = fusion(a->next, b);
+        if (result->next) result->next->prev = result;  // 🔥 important
+    } else {
+        result = b;
+        result->next = fusion(a, b->next);
+        if (result->next) result->next->prev = result;  // 🔥 important
+    }
+    result->prev = NULL;  // sécurité
+    return result;
+}
+
+
+
+void mergeSort(chained_list_t ** headRef) {
+    chained_list_t* head = *headRef;
+    if (!head || !head->next) return;
+
+    chained_list_t* a;
+    chained_list_t* b;
+
+    split(head, &a, &b);
+
+    mergeSort(&a);
+    mergeSort(&b);
+
+    *headRef = fusion(a, b);
+}
+
+chained_list_t *get_higher_element(chained_list_t *list) {
+    if(list != NULL) {
+        chained_list_t *p = get_first_element(list);
+        chained_list_t *higher = p;
+        while(p != NULL) {
+            if(p->x > higher->x)
+                higher = p;
+            if(p->next == NULL)
+                break;
+            p = p->next;
+        }
+        return higher;
+    }
+    return NULL;
+}
 
