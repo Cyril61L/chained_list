@@ -22,6 +22,7 @@ typedef enum {
     ERR_MALLOC_FAILED = 1,
     ERR_PARAM = 2,
     ERR_NULL_POINTER = 3,
+    ERR_LIST_FULL = 4,
 }err_t;
 
 
@@ -35,7 +36,8 @@ typedef struct {
     char *name[32];
     size_t contentLen;
     uint8_t listLength;
-    chained_list_t *list;
+    chained_list_t *head;
+    chained_list_t *tail;
 }list_handler_t;
 
 err_t list_init(list_handler_t *listHandler, const char *name, size_t len);

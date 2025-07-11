@@ -56,8 +56,8 @@ int main(void) {
     }
 
     // Ajout message dans liste chainee en tete pour fifo
-    for(uint8_t i=0;i<4;i++) {
-        insert_first(&msgTab[i]);
+    for(uint8_t i=0;i<105;i++) {
+        insert_first(&msgTab[i%2]);
     }
 
     printf("len %u\n", list_get_size(&myFifo));
