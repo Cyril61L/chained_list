@@ -11,26 +11,43 @@
 
 #include <stdint-gcc.h>
 #include <stdbool.h>
+#include <glob.h>
+
+#define LIST_MAX_LEN            100
+#define CONTENT_MAX_SIZE        512
+#define LIST_NAME_SIZE          32
+
+typedef enum {
+    ERR_OK = 0,
+    ERR_MALLOC_FAILED = 1,
+    ERR_PARAM = 2,
+    ERR_NULL_POINTER = 3,
+}err_t;
+
 
 typedef struct elem {
-    uint8_t x;
+    void *content;
     struct elem *prev;
     struct elem *next;
 }chained_list_t;
 
-void init_list(chained_list_t *list);
-chained_list_t *get_first_element(chained_list_t *list);
-chained_list_t *get_last_element(chained_list_t *list);
-chained_list_t *add(chained_list_t **list, uint8_t value);
-void pop(chained_list_t *list, uint8_t *value);
-void show_list(chained_list_t *list);
-uint16_t get_size_list(chained_list_t *list);
-chained_list_t *insert_element(chained_list_t *list,bool before,chained_list_t *place, uint8_t value);
-void delete_element(chained_list_t *list,chained_list_t *element);
-void swap_element(chained_list_t *b, chained_list_t *c);
-chained_list_t *get_higher_element(chained_list_t *list);
-void sort(chained_list_t *list);
-void sort2(chained_list_t *list);
-void mergeSort(chained_list_t ** headRef);
+typedef struct {
+    char *name[32];
+    size_t contentLen;
+    uint8_t listLength;
+    chained_list_t *list;
+}list_handler_t;
+
+err_t list_init(list_handler_t *listHandler, const char *name, size_t len);
+uint16_t list_get_size(list_handler_t *listHandler);
+
+err_t list_add(list_handler_t *listHandler, void *content);
+err_t list_pop(list_handler_t *listHandler, void *content);
+
+err_t list_insert_element(list_handler_t *listHandler,bool before,chained_list_t *place, void *content);
+chained_list_t *list_get_first_element(list_handler_t *listHandler);
+chained_list_t *list_get_last_element(list_handler_t *listHandler);
+void list_delete_element(list_handler_t *listHandler,chained_list_t *element);
+err_t list_swap_element(chained_list_t *b, chained_list_t *c);
 
 #endif //CHIANED_LIST_CHAINED_LIST_H

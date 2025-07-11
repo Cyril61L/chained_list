@@ -17,24 +17,45 @@
 
 
 
+err_t search_element(list_handler_t *listHandler, chained_list_t *searchedElement, bool *result);
 
+
+err_t list_init(list_handler_t *listHandler, const char *name, size_t len);
+uint16_t list_get_size(list_handler_t *listHandler);
+
+err_t list_add(list_handler_t *listHandler, void *content);
+err_t list_pop(list_handler_t *listHandler, void *content);
+
+err_t list_insert_element(list_handler_t *listHandler,bool before,chained_list_t *place, void *content);
+chained_list_t *list_get_first_element(list_handler_t *listHandler);
+chained_list_t *list_get_last_element(list_handler_t *listHandler);
+void list_delete_element(list_handler_t *listHandler,chained_list_t *element);
+err_t list_swap_element(chained_list_t *b, chained_list_t *c);
 
 /**
  * @brief
  * @param list
  */
-void init_list(chained_list_t *list) {
-    list = NULL;
+err_t list_init(list_handler_t *listHandler, const char *name, size_t len) {
+    if(len > CONTENT_MAX_SIZE || len <= 0) {
+        return ERR_PARAM;
+    }
+    strncpy((char *) listHandler->name, name, LIST_NAME_SIZE);
+    listHandler->list = NULL;
+    listHandler->contentLen = len;
+    listHandler->listLength = 0;
+    return ERR_OK;
 }
+
 
 /**
  * @brief
  * @return
  */
-chained_list_t *get_first_element(chained_list_t *list) {
+chained_list_t *list_get_first_element(list_handler_t *listHandler) {
     chained_list_t *p;
-    if(list != NULL) {
-        p = list;
+    if(listHandler->list != NULL) {
+        p = listHandler->list;
         while(p->prev != NULL) {
             p = p->prev;
         }
@@ -43,14 +64,15 @@ chained_list_t *get_first_element(chained_list_t *list) {
     return NULL;
 }
 
+
 /**
  * @brief
  * @return
  */
-chained_list_t *get_last_element(chained_list_t *list) {
+chained_list_t *list_get_last_element(list_handler_t *listHandler) {
     chained_list_t *p;
-    if(list != NULL) {
-        p = list;
+    if(listHandler->list != NULL) {
+        p = listHandler->list;
         while(p->next != NULL) {
             p = p->next;
         }
@@ -59,35 +81,48 @@ chained_list_t *get_last_element(chained_list_t *list) {
     return NULL;
 }
 
+
 /**
  * @brief
  * @param list
  * @param value
  * @return
  */
-chained_list_t *add(chained_list_t **list, uint8_t value) {
+err_t list_add(list_handler_t *listHandler, void *content) {
+    if(listHandler == NULL || content == NULL) {
+        return ERR_PARAM;
+    }
+
     chained_list_t *newElement = malloc(sizeof(chained_list_t));
     if(newElement != NULL) {
-        if(*list == NULL) {
-            printf("Premier élement %u\n",value);
-            *list = newElement;
-            newElement->x = value;
-            newElement->next = NULL;
-            newElement->prev = NULL;
-            return newElement;
-        } else {
-            chained_list_t *p = get_last_element(*list);
-            //printf("Ajout élement %u\n",value);
+        if(listHandler->list == NULL) {
+            listHandler->list = newElement;
+            void *p = malloc(listHandler->contentLen);
             if(p != NULL) {
-                newElement->x = value;
-                p->next = newElement;
-                newElement->prev = p;
+                memcpy(p,content,listHandler->contentLen);
+                newElement->content = p;
                 newElement->next = NULL;
-                return newElement;
+                newElement->prev = NULL;
+                return ERR_OK;
+            }
+        } else {
+            chained_list_t *pLast = list_get_last_element(listHandler);
+            //printf("Ajout élement %u\n",value);
+            if(pLast != NULL) {
+                void *p = malloc(listHandler->contentLen);
+                if(p != NULL) {
+                    memcpy(p,content,listHandler->contentLen);
+                    pLast->next = newElement;
+                    newElement->content = p;
+                    newElement->prev = pLast;
+                    newElement->next = NULL;
+                    return ERR_OK;
+                }
             }
         }
+        return ERR_NULL_POINTER;
     }
-    return NULL;
+    return ERR_MALLOC_FAILED;
 }
 
 
@@ -96,45 +131,39 @@ chained_list_t *add(chained_list_t **list, uint8_t value) {
  * @param list
  * @param value
  */
-void pop(chained_list_t *list, uint8_t *value) {
+err_t list_pop(list_handler_t *listHandler, void *content) {
     chained_list_t *p;
-    chained_list_t *last = get_last_element(list);
+
+    if(listHandler == NULL || content == NULL || listHandler->list == NULL) {
+        return ERR_PARAM;
+    }
+
+    chained_list_t *last = list_get_last_element(listHandler);
     if(last != NULL) {
-        printf("Delete %u\n",last->x);
-        if(value!= NULL)*value = last->x;
+        //printf("Delete\n");
+        if(last->content != NULL) {
+            memcpy(content,last->content,listHandler->contentLen);
+            free(last->content);
+        }
         if(last->prev != NULL) {
             p = last->prev;
             p->next = NULL;
         }
         free(last);
+        return ERR_OK;
     }
+    return ERR_NULL_POINTER;
 }
 
-/**
- * @brief
- * @param list
- */
-void show_list(chained_list_t *list) {
-    chained_list_t *p = get_first_element(list);
-    if(p != NULL) {
-        printf("Show list ");
-        while(p != NULL) {
-            printf("->[%u]<-",p->x);
-            p = p->next;
-        }
-    } else {
-    }
-    printf("\n");
-}
 
 /**
  * @brief
  * @param list
  * @return
  */
-uint16_t get_size_list(chained_list_t *list) {
+uint16_t list_get_size_list(list_handler_t *listHandler) {
     uint16_t n = 0;
-    chained_list_t *p = get_first_element(list);
+    chained_list_t *p = list_get_first_element(listHandler);
     if(p != NULL) {
         n = 1;
         while(p->next != NULL) {
@@ -153,8 +182,8 @@ uint16_t get_size_list(chained_list_t *list) {
  * @param value
  * @return
  */
-chained_list_t *insert_element(chained_list_t *list,bool before,chained_list_t *place, uint8_t value) {
-    if(list != NULL && place != NULL) {
+err_t list_insert_element(list_handler_t *listHandler,bool before,chained_list_t *place, void *content) {
+    if(listHandler->list != NULL && place != NULL) {
         chained_list_t *p = malloc(sizeof(chained_list_t));
         if(p != NULL) {
             if(before) {
@@ -174,11 +203,16 @@ chained_list_t *insert_element(chained_list_t *list,bool before,chained_list_t *
                 p->prev = place;
                 place->next = p;
             }
-            p->x = value;
-            return p;
+            void *pNewContent = malloc(listHandler->contentLen);
+            if(pNewContent != NULL) {
+                memcpy(pNewContent, content,listHandler->contentLen);
+                p->content = pNewContent;
+                return ERR_OK;
+            }
         }
+        return ERR_MALLOC_FAILED;
     }
-    return NULL;
+    return ERR_NULL_POINTER;
 }
 
 /**
@@ -187,8 +221,8 @@ chained_list_t *insert_element(chained_list_t *list,bool before,chained_list_t *
  * @param element
  * @return
  */
-void delete_element(chained_list_t *list,chained_list_t *element) {
-    if(list != NULL && element != NULL) {
+void list_delete_element(list_handler_t *listHandler,chained_list_t *element) {
+    if(listHandler->list != NULL && element != NULL) {
         chained_list_t *prev = element->prev;
         chained_list_t *next = element->next;
         // Cas du premier
@@ -204,9 +238,12 @@ void delete_element(chained_list_t *list,chained_list_t *element) {
         } else {
             // Element seul
         }
+        free(element->content);
         free(element);
     }
 }
+
+
 
 
 /**
@@ -214,7 +251,7 @@ void delete_element(chained_list_t *list,chained_list_t *element) {
  * @param a
  * @param b
  */
-void swap_element(chained_list_t *a, chained_list_t *b) {
+err_t list_swap_element(chained_list_t *a, chained_list_t *b) {
     chained_list_t *tmp_prev_a = a->prev;
     chained_list_t *tmp_next_a = a->next;
     chained_list_t *tmp_prev_b = b->prev;
@@ -263,139 +300,27 @@ void swap_element(chained_list_t *a, chained_list_t *b) {
         b->next = tmp_next_a;
         b->prev = tmp_prev_a;
     }
+    return ERR_OK;
 }
-
 
 /**
  * @brief
- * @param list
+ * @param listHandler
+ * @param searchedElement
+ * @return
  */
-void sort(chained_list_t *list) {
-    bool swap = false;
-    chained_list_t *next;
-    chained_list_t *p = get_first_element(list);
-    if(p != NULL && p->next != NULL) {
-        while (p->next != NULL) {
-            //printf("Place : %u\n",p->x);
-            // Step 1 :
-            next = p->next;
-            while(p->x > next->x) {
-                swap = true;
-                swap_element(p,next);
-                //show_list(list);
-                next = p->next;
-                if(next == NULL)
-                    break;
-            }
-            if(swap == true) {
-                p = get_first_element(list);
-                swap = false;
-            } else {
+err_t list_search_element(list_handler_t *listHandler, chained_list_t *searchedElement, bool *result) {
+    *result = false;
+    if(listHandler->list != NULL) {
+        chained_list_t  *p = list_get_first_element(listHandler);
+        while(p->next != NULL) {
                 p = p->next;
-            }
+                if(searchedElement == p) {
+                    *result = true;
+                    return ERR_OK;
+                }
         }
+        return ERR_OK;
     }
+    return ERR_NULL_POINTER;
 }
-
-/**
- * @brief
- * @param list
- */
-void sort2(chained_list_t *list) {
-    chained_list_t *higher,*tmp = NULL;
-    uint16_t len = get_size_list(list);
-    for(uint16_t i=0; i<len-1;i++) {
-        // Recherche l'element avec la plus grande valeur
-        // [15]---[2]---[8]---[12] => [15]
-        higher = get_higher_element(list);
-        // Place le plus haut element trouvé en dernier
-        // [12]---[2]---[8]---[15]
-        swap_element(higher, get_last_element(list));
-        // Replace le pointeur de list sur le premier element
-        list = get_first_element(list);
-        // On décroche le dernier element pour ne pas le compter dans la prochaine recherche de la plus haute valeur
-        // [12]---[2]---[8]-x-[15]
-        higher->prev->next = NULL;
-        if(tmp != NULL)
-            // On raccroche la suite à partir du second tour
-            // [8]---[2]-x-[12]-x-[15] => [8]---[2]-x-[12]---[15]
-            higher->next = tmp;
-        tmp = higher;
-        //show_list(list);
-    }
-    chained_list_t *first = get_first_element(list);
-    // On raccroche le reste
-    // [2]-x-[8]---[12]---[15] => [2]---[8]---[12]---[15]
-    first->next = higher;
-}
-
-
-void split(chained_list_t * source, chained_list_t** front, chained_list_t** back) {
-    chained_list_t* slow = source;
-    chained_list_t* fast = source->next;
-
-    while (fast) {
-        fast = fast->next;
-        if (fast) {
-            slow = slow->next;
-            fast = fast->next;
-        }
-    }
-
-    *front = source;
-    *back = slow->next;
-    slow->next = NULL;
-}
-
-
-chained_list_t* fusion(chained_list_t* a, chained_list_t* b) {
-    if (!a) return b;
-    if (!b) return a;
-
-    chained_list_t* result = NULL;
-    if (a->x <= b->x) {
-        result = a;
-        result->next = fusion(a->next, b);
-        if (result->next) result->next->prev = result;  // 🔥 important
-    } else {
-        result = b;
-        result->next = fusion(a, b->next);
-        if (result->next) result->next->prev = result;  // 🔥 important
-    }
-    result->prev = NULL;  // sécurité
-    return result;
-}
-
-
-
-void mergeSort(chained_list_t ** headRef) {
-    chained_list_t* head = *headRef;
-    if (!head || !head->next) return;
-
-    chained_list_t* a;
-    chained_list_t* b;
-
-    split(head, &a, &b);
-
-    mergeSort(&a);
-    mergeSort(&b);
-
-    *headRef = fusion(a, b);
-}
-
-chained_list_t *get_higher_element(chained_list_t *list) {
-    if(list != NULL) {
-        chained_list_t *p = get_first_element(list);
-        chained_list_t *higher = p;
-        while(p != NULL) {
-            if(p->x > higher->x)
-                higher = p;
-            if(p->next == NULL)
-                break;
-            p = p->next;
-        }
-        return higher;
-    }
-    return NULL;
-}
-
