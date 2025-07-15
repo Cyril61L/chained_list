@@ -21,13 +21,14 @@
  * @brief
  * @param list
  */
-err_t list_init(list_handler_t *listHandler, const char *name, size_t len) {
+err_t list_init(list_handler_t *listHandler, const char *name, size_t len, list_mode_t mode) {
     if(len > CONTENT_MAX_SIZE || len <= 0) {
         return ERR_PARAM;
     }
     strncpy((char *) listHandler->name, name, LIST_NAME_SIZE);
     listHandler->head = NULL;
     listHandler->tail = NULL;
+    listHandler->listMode = mode;
     listHandler->contentLen = len;
     listHandler->listLength = 0;
     return ERR_OK;
@@ -68,59 +69,7 @@ chained_list_t *list_get_last_element(list_handler_t *listHandler) {
 }
 
 
-/**
- * @brief
- * @param list
- * @param value
- * @return
- */
-err_t list_insert_head(list_handler_t *listHandler, void *content) {
-    if(listHandler == NULL || content == NULL) {
-        return ERR_PARAM;
-    }
 
-    if(listHandler->listLength == LIST_MAX_LEN ) {
-        return ERR_LIST_FULL;
-    }
-
-    chained_list_t *newElement = malloc(sizeof(chained_list_t));
-    if(newElement != NULL) {
-        if(listHandler->head == NULL) {
-            listHandler->head = newElement;
-            listHandler->tail = listHandler->head;
-            void *p = malloc(listHandler->contentLen);
-            if(p != NULL) {
-                memcpy(p,content,listHandler->contentLen);
-                newElement->content = p;
-                newElement->next = NULL;
-                newElement->prev = NULL;
-                listHandler->listLength++;
-                return ERR_OK;
-            } else {
-                free(newElement);
-                return ERR_MALLOC_FAILED;
-            }
-        } else {
-            chained_list_t *pFirst = listHandler->head;
-            void *p = malloc(listHandler->contentLen);
-            if (p != NULL) {
-                memcpy(p, content, listHandler->contentLen);
-                pFirst->prev = newElement;
-                newElement->content = p;
-                newElement->next = pFirst;
-                newElement->prev = NULL;
-                // move head and tail
-                listHandler->head = newElement;
-                listHandler->listLength++;
-                return ERR_OK;
-            } else {
-                free(newElement);
-                return ERR_MALLOC_FAILED;
-            }
-        }
-    }
-    return ERR_MALLOC_FAILED;
-}
 
 
 /**
@@ -129,7 +78,7 @@ err_t list_insert_head(list_handler_t *listHandler, void *content) {
  * @param value
  * @return
  */
-err_t list_insert_tail(list_handler_t *listHandler, void *content) {
+err_t list_add(list_handler_t *listHandler, void *content) {
     if(listHandler == NULL || content == NULL) {
         return ERR_PARAM;
     }
@@ -138,43 +87,32 @@ err_t list_insert_tail(list_handler_t *listHandler, void *content) {
         return ERR_LIST_FULL;
     }
 
+    // Allocate new node and content
     chained_list_t *newElement = malloc(sizeof(chained_list_t));
-    if(newElement != NULL) {
-        if(listHandler->tail == NULL) {
-            listHandler->tail = newElement;
-            listHandler->head = listHandler->tail;
-            void *p = malloc(listHandler->contentLen);
-            if(p != NULL) {
-                memcpy(p,content,listHandler->contentLen);
-                newElement->content = p;
-                newElement->next = NULL;
-                newElement->prev = NULL;
-                listHandler->listLength++;
-                return ERR_OK;
-            } else {
-                free(newElement);
-                return ERR_MALLOC_FAILED;
-            }
-        } else {
-            chained_list_t *pLast = listHandler->tail;
-            void *p = malloc(listHandler->contentLen);
-            if (p != NULL) {
-                memcpy(p, content, listHandler->contentLen);
-                pLast->next = newElement;
-                newElement->content = p;
-                newElement->prev = pLast;
-                newElement->next = NULL;
-                // move head and tail
-                listHandler->tail = newElement;
-                listHandler->listLength++;
-                return ERR_OK;
-            } else {
-                free(newElement);
-                return ERR_MALLOC_FAILED;
-            }
-        }
+    if (newElement == NULL) {
+        return ERR_MALLOC_FAILED;
     }
-    return ERR_MALLOC_FAILED;
+
+    void *p = malloc(listHandler->contentLen);
+    if (p == NULL) {
+        free(newElement);
+        return ERR_MALLOC_FAILED;
+    }
+    memcpy(p, content, listHandler->contentLen);
+    newElement->content = p;
+    newElement->next = NULL;
+    newElement->prev = listHandler->tail;
+
+    if (listHandler->tail) {
+        listHandler->tail->next = newElement;
+    } else {
+        // List was empty
+        listHandler->head = newElement;
+    }
+
+    listHandler->tail = newElement;
+    listHandler->listLength++;
+    return ERR_OK;
 }
 
 
@@ -183,60 +121,35 @@ err_t list_insert_tail(list_handler_t *listHandler, void *content) {
  * @param list
  * @param value
  */
-err_t list_pop_tail(list_handler_t *listHandler, void *content) {
+err_t list_pop(list_handler_t *listHandler, void *content) {
+    chained_list_t *p;
 
     if(listHandler == NULL || content == NULL || listHandler->tail == NULL) {
         return ERR_PARAM;
     }
 
-    chained_list_t *last = listHandler->tail;//list_get_last_element(listHandler);
-    if(last != NULL) {
-        if(last->content != NULL) {
-            memcpy(content,last->content,listHandler->contentLen);
-            free(last->content);
+    if(listHandler->listMode == LIST_MODE_FIFO) {
+        p = listHandler->head;
+    } else {
+        p = listHandler->tail;
+    }
+    if(p != NULL) {
+        if(p->content != NULL) {
+            memcpy(content,p->content,listHandler->contentLen);
+            free(p->content);
         }
-        if(last->prev != NULL) {
-            last->prev->next = NULL;
-            listHandler->tail = last->prev;
+        if(listHandler->listMode == LIST_MODE_FIFO && p->next != NULL) {
+            p->next->prev = NULL;
+            listHandler->head = p->next;
+        } else if(listHandler->listMode == LIST_MODE_LIFO && p->prev != NULL) {
+            p->prev->next = NULL;
+            listHandler->tail = p->prev;
         } else {
             // On supprimait le seul élément
             listHandler->tail = NULL;
             listHandler->head = NULL;
         }
-        free(last);
-        listHandler->listLength--;
-        return ERR_OK;
-    }
-    return ERR_NULL_POINTER;
-}
-
-
-/**
- * @brief
- * @param list
- * @param value
- */
-err_t list_pop_head(list_handler_t *listHandler, void *content) {
-
-    if(listHandler == NULL || content == NULL || listHandler->head == NULL) {
-        return ERR_PARAM;
-    }
-
-    chained_list_t *pFirst = listHandler->head;
-    if(pFirst != NULL) {
-        if(pFirst->content != NULL) {
-            memcpy(content,pFirst->content,listHandler->contentLen);
-            free(pFirst->content);
-        }
-        if(pFirst->next != NULL) {
-            pFirst->next->prev = NULL;
-            listHandler->head = pFirst->next;
-        } else {
-            // On supprimait le seul élément
-            listHandler->tail = NULL;
-            listHandler->head = NULL;
-        }
-        free(pFirst);
+        free(p);
         listHandler->listLength--;
         return ERR_OK;
     }

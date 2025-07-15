@@ -16,7 +16,7 @@ set(CMAKE_SYSTEM_PROCESSOR aarch64)
 
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror -Wall -D_GNU_SOURCE -std=gnu17")
 
-add_executable(chained_list main_fifo.c
+add_executable(chained_list main.c
         chained_list.c
         chained_list.h
 )
