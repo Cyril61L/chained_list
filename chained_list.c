@@ -11,6 +11,7 @@
 #include <memory.h>
 #include <stdbool.h>
 #include <malloc.h>
+#include <pthread.h>
 #include "stdint.h"
 
 
@@ -31,6 +32,7 @@ err_t list_init(list_handler_t *listHandler, const char *name, size_t len, list_
     listHandler->listMode = mode;
     listHandler->contentLen = len;
     listHandler->listLength = 0;
+    pthread_mutex_init(&listHandler->lock, NULL);
     return ERR_OK;
 }
 
@@ -43,15 +45,10 @@ err_t list_init(list_handler_t *listHandler, const char *name, size_t len, list_
 err_t list_free(list_handler_t *listHandler) {
     chained_list_t *elem;
     if(listHandler != NULL) {
+        do {
             elem = list_get_last_element(listHandler);
-        printf("\t%u\n",elem);
             list_delete_element(listHandler,elem);
-        elem = list_get_last_element(listHandler);
-        printf("\t%u\n",elem);
-        list_delete_element(listHandler,elem);
-        elem = list_get_last_element(listHandler);
-        printf("\t%u\n",elem);
-        list_delete_element(listHandler,elem);
+        } while (elem != NULL);
         listHandler = NULL;
         return ERR_OK;
     }

@@ -27,6 +27,7 @@
 #include <stdint-gcc.h>
 #include <stdbool.h>
 #include <glob.h>
+#include <pthread.h>
 
 #define LIST_MAX_LEN            100
 #define CONTENT_MAX_SIZE        512
@@ -61,6 +62,7 @@ typedef struct {
     list_mode_t listMode;
     chained_list_t *head;
     chained_list_t *tail;
+    pthread_mutex_t lock;
 }list_handler_t;
 
 err_t list_init(list_handler_t *listHandler, const char *name, size_t len, list_mode_t mode);
