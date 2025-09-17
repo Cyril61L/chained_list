@@ -45,10 +45,13 @@ err_t list_init(list_handler_t *listHandler, const char *name, size_t len, list_
 err_t list_free(list_handler_t *listHandler) {
     chained_list_t *elem;
     if(listHandler != NULL) {
+        pthread_mutex_lock(&listHandler->lock);
         do {
             elem = list_get_last_element(listHandler);
             list_delete_element(listHandler,elem);
         } while (elem != NULL);
+        pthread_mutex_unlock(&listHandler->lock);
+        pthread_mutex_destroy(&listHandler->lock);
         listHandler = NULL;
         return ERR_OK;
     }
@@ -107,16 +110,19 @@ err_t list_add(list_handler_t *listHandler, void *content) {
     if(listHandler->listLength == LIST_MAX_LEN ) {
         return ERR_LIST_FULL;
     }
-
+    // Lock
+    pthread_mutex_lock(&listHandler->lock);
     // Allocate new node and content
     chained_list_t *newElement = malloc(sizeof(chained_list_t));
     if (newElement == NULL) {
+        pthread_mutex_unlock(&listHandler->lock);
         return ERR_MALLOC_FAILED;
     }
 
     void *p = malloc(listHandler->contentLen);
     if (p == NULL) {
         free(newElement);
+        pthread_mutex_unlock(&listHandler->lock);
         return ERR_MALLOC_FAILED;
     }
     memcpy(p, content, listHandler->contentLen);
@@ -133,6 +139,7 @@ err_t list_add(list_handler_t *listHandler, void *content) {
 
     listHandler->tail = newElement;
     listHandler->listLength++;
+    pthread_mutex_unlock(&listHandler->lock);
     return ERR_OK;
 }
 
@@ -148,6 +155,8 @@ err_t list_pop(list_handler_t *listHandler, void *content) {
     if(listHandler == NULL || content == NULL || listHandler->tail == NULL) {
         return ERR_PARAM;
     }
+    // Lock
+    pthread_mutex_lock(&listHandler->lock);
 
     if(listHandler->listMode == LIST_MODE_FIFO) {
         p = listHandler->head;
@@ -172,8 +181,10 @@ err_t list_pop(list_handler_t *listHandler, void *content) {
         }
         free(p);
         listHandler->listLength--;
+        pthread_mutex_unlock(&listHandler->lock);
         return ERR_OK;
     }
+    pthread_mutex_unlock(&listHandler->lock);
     return ERR_NULL_POINTER;
 }
 
