@@ -37,6 +37,30 @@ err_t list_init(list_handler_t *listHandler, const char *name, size_t len, list_
 
 /**
  * @brief
+ * @param listHandler
+ * @return
+ */
+err_t list_free(list_handler_t *listHandler) {
+    chained_list_t *elem;
+    if(listHandler != NULL) {
+            elem = list_get_last_element(listHandler);
+        printf("\t%u\n",elem);
+            list_delete_element(listHandler,elem);
+        elem = list_get_last_element(listHandler);
+        printf("\t%u\n",elem);
+        list_delete_element(listHandler,elem);
+        elem = list_get_last_element(listHandler);
+        printf("\t%u\n",elem);
+        list_delete_element(listHandler,elem);
+        listHandler = NULL;
+        return ERR_OK;
+    }
+    return ERR_NULL_POINTER;
+}
+
+
+/**
+ * @brief
  * @return
  */
 chained_list_t *list_get_first_element(list_handler_t *listHandler) {
@@ -252,6 +276,8 @@ void list_delete_element(list_handler_t *listHandler,chained_list_t *element) {
             next->prev = prev;
         } else {
             // Element seul
+            listHandler->tail = NULL;
+            listHandler->head = NULL;
         }
         listHandler->listLength--;
         free(element->content);

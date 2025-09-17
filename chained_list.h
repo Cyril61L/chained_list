@@ -64,6 +64,7 @@ typedef struct {
 }list_handler_t;
 
 err_t list_init(list_handler_t *listHandler, const char *name, size_t len, list_mode_t mode);
+err_t list_free(list_handler_t *listHandler);
 uint16_t list_get_size(list_handler_t *listHandler);
 
 err_t list_add(list_handler_t *listHandler, void *content);
