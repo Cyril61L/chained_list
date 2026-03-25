@@ -29,16 +29,11 @@
 #include <glob.h>
 #include <pthread.h>
 
-#define LIST_MAX_LEN            100
-#define CONTENT_MAX_SIZE        512
-#define LIST_NAME_SIZE          32
+#define LIST_MAX_LEN     100
+#define CONTENT_MAX_SIZE 512
+#define LIST_NAME_SIZE   32
 
-
-typedef enum {
-    LIST_MODE_FIFO,
-    LIST_MODE_LIFO
-}list_mode_t;
-
+typedef enum { LIST_MODE_FIFO, LIST_MODE_LIFO } list_mode_t;
 
 typedef enum {
     ERR_OK = 0,
@@ -46,37 +41,35 @@ typedef enum {
     ERR_PARAM = 2,
     ERR_NULL_POINTER = 3,
     ERR_LIST_FULL = 4,
-}err_t;
-
+    ERR_NOT_FOUND = 5,
+} err_t;
 
 typedef struct elem {
-    void *content;
-    struct elem *prev;
-    struct elem *next;
-}chained_list_t;
+    void* content;
+    uint64_t id;
+    struct elem* prev;
+    struct elem* next;
+} chained_list_t;
 
-typedef struct {
-    char *name[32];
+typedef struct list_handler {
+    char name[LIST_NAME_SIZE];
     size_t contentLen;
     uint8_t listLength;
     list_mode_t listMode;
-    chained_list_t *head;
-    chained_list_t *tail;
+    chained_list_t* head;
+    chained_list_t* tail;
     pthread_mutex_t lock;
-}list_handler_t;
+}* list_handler_t;
 
-err_t list_init(list_handler_t *listHandler, const char *name, size_t len, list_mode_t mode);
-err_t list_free(list_handler_t *listHandler);
-uint16_t list_get_size(list_handler_t *listHandler);
+err_t list_init(list_handler_t* listHandler, const char* name, size_t len, list_mode_t mode);
+err_t list_free(list_handler_t listHandler);
+uint16_t list_get_size(list_handler_t listHandler);
 
-err_t list_add(list_handler_t *listHandler, void *content);
-err_t list_pop(list_handler_t *listHandler, void *content);
-err_t list_insert_element(list_handler_t *listHandler,bool before,chained_list_t *place, void *content);
+err_t list_add(list_handler_t listHandler, const void* content);
+err_t list_add_id(list_handler_t listHandler, const void* content, const uint64_t* id);
+err_t list_pop(list_handler_t listHandler, void* content);
 
-chained_list_t *list_get_first_element(list_handler_t *listHandler);
-chained_list_t *list_get_last_element(list_handler_t *listHandler);
-chained_list_t *list_get_element_by_index(list_handler_t *listHandler, uint16_t index);
-void list_delete_element(list_handler_t *listHandler,chained_list_t *element);
-err_t list_swap_element(list_handler_t *listHandler, chained_list_t *b, chained_list_t *c);
+err_t list_get_element_by_index(list_handler_t listHandler, uint16_t index, void* content, bool delete);
+err_t list_get_element_by_id(list_handler_t listHandler, uint64_t id, void* content, bool delete);
 
 #endif //CHAINED_LIST_H
