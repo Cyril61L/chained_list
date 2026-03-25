@@ -28,17 +28,15 @@ chained_list_t* list_get_element_by_index_(list_handler_t* listHandler, uint16_t
  * @brief Initialize a new linked list handler.
  *
  * @param listHandler Pointer to the list handler to initialize.
- * @param name        Name of the list (copied into listHandler->name).
  * @param len         Size in bytes of each element’s content.
  * @param mode        List operating mode (FIFO or LIFO).
  * @return            ERR_OK if success, ERR_PARAM if invalid parameters.
  */
-err_t list_init(list_handler_t* listHandler, const char* name, size_t len, list_mode_t mode) {
+err_t list_init(list_handler_t* listHandler, size_t len, list_mode_e mode) {
     if (len > CONTENT_MAX_SIZE || len <= 0) {
         return ERR_PARAM;
     }
-    
-    strncpy((char*)listHandler->name, name, LIST_NAME_SIZE);
+
     listHandler->head = NULL;
     listHandler->tail = NULL;
     listHandler->listMode = mode;

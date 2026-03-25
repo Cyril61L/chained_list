@@ -31,9 +31,8 @@
 
 #define LIST_MAX_LEN     100
 #define CONTENT_MAX_SIZE 512
-#define LIST_NAME_SIZE   32
 
-typedef enum { LIST_MODE_FIFO, LIST_MODE_LIFO , LIST_MODE_CIRCULAR} list_mode_t;
+typedef enum { LIST_MODE_FIFO, LIST_MODE_LIFO , LIST_MODE_CIRCULAR} list_mode_e;
 
 typedef enum {
     ERR_OK = 0,
@@ -60,25 +59,24 @@ typedef struct elem {
 } chained_list_t;
 
 typedef struct list_handler {
-    char name[LIST_NAME_SIZE];
     size_t contentLen;
     uint8_t listLength;
-    list_mode_t listMode;
+    list_mode_e listMode;
     chained_list_t* head;
     chained_list_t* current;
     chained_list_t* tail;
     pthread_mutex_t lock;
 } list_handler_t;
 
-err_t list_init(list_handler_t* listHandler, const char* name, size_t len, list_mode_t mode);
+err_t list_init(list_handler_t* listHandler, size_t len, list_mode_e mode);
 err_t list_free(list_handler_t* listHandler);
 uint16_t list_get_size(list_handler_t* listHandler);
 
 err_t list_add(list_handler_t* listHandler, const void* content);
-err_t list_add_id(list_handler_t* listHandler, const void* content, const uint64_t id);
+err_t list_add_id(list_handler_t* listHandler, const void* content, uint64_t id);
 err_t list_pop(list_handler_t* listHandler, void* content);
-err_t list_get_element(list_handler_t* listHandler, list_move_e move, void* content);
 
+err_t list_get_element(list_handler_t* listHandler, list_move_e move, void* content);
 err_t list_get_element_by_index(list_handler_t* listHandler, uint16_t index, void* content, bool delete);
 err_t list_get_element_by_id(list_handler_t* listHandler, uint64_t id, void* content, bool delete);
 
