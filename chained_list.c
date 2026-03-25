@@ -18,7 +18,8 @@
 chained_list_t* list_get_first_element(list_handler_t* listHandler);
 chained_list_t* list_get_last_element(list_handler_t* listHandler);
 err_t list_insert_element(list_handler_t* listHandler, bool before, chained_list_t* place, const void* content, const uint64_t* id);
-void list_delete_element(list_handler_t* listHandler, chained_list_t* element);
+err_t list_get_element_(list_handler_t* listHandler, chained_list_t* element, void* content, bool delete);
+err_t list_delete_element(list_handler_t* listHandler, chained_list_t* element);
 err_t list_swap_element(list_handler_t* listHandler, chained_list_t* a, chained_list_t* b);
 chained_list_t* list_get_element_by_id_(list_handler_t* listHandler, uint64_t id);
 chained_list_t* list_get_element_by_index_(list_handler_t* listHandler, uint16_t index);
@@ -115,7 +116,7 @@ chained_list_t* list_get_last_element(list_handler_t* listHandler) {
  *                    ERR_MALLOC_FAILED if memory allocation fails.
  */
 err_t list_add(list_handler_t* listHandler, const void* content) {
-    return list_add_id(listHandler, content, NULL);
+    return list_add_id(listHandler, content, ID_UNDEFINED);
 }
 
 /**
@@ -129,7 +130,7 @@ err_t list_add(list_handler_t* listHandler, const void* content) {
  *                    ERR_LIST_FULL if list is full,
  *                    ERR_MALLOC_FAILED if memory allocation fails.
  */
-err_t list_add_id(list_handler_t* listHandler, const void* content, const uint64_t* id) {
+err_t list_add_id(list_handler_t* listHandler, const void* content, const uint64_t id) {
     if (listHandler == NULL || content == NULL) {
         return ERR_PARAM;
     }
@@ -139,7 +140,7 @@ err_t list_add_id(list_handler_t* listHandler, const void* content, const uint64
         return ERR_LIST_FULL;
     }
 
-    if (id != NULL && (list_get_element_by_id_(listHandler, *id) != NULL || *id == ID_UNDEFINED)) {
+    if (id != ID_UNDEFINED && list_get_element_by_id_(listHandler, id) != NULL) {
         pthread_mutex_unlock(&listHandler->lock);
         return ERR_PARAM;
     }
@@ -159,22 +160,24 @@ err_t list_add_id(list_handler_t* listHandler, const void* content, const uint64
     }
     memcpy(p, content, listHandler->contentLen);
     newElement->content = p;
-    newElement->next = NULL;
-    if (id) {
-        newElement->id = *id;
+    newElement->id = id;
+    if (listHandler->tail && listHandler->head) {
+        if (listHandler->listMode == LIST_MODE_FIFO) {
+            newElement->next = listHandler->head;
+            listHandler->head->prev = newElement;
+            listHandler->head = newElement;
+        } else {
+            newElement->prev = listHandler->tail;
+            listHandler->tail->next = newElement;
+            listHandler->tail = newElement;
+        }
     } else {
-        newElement->id = ID_UNDEFINED;
-    }
-    newElement->prev = listHandler->tail;
-
-    if (listHandler->tail) {
-        listHandler->tail->next = newElement;
-    } else {
-        // List was empty
+        // First element
         listHandler->head = newElement;
+        listHandler->tail = newElement;
+        listHandler->current = newElement;
     }
 
-    listHandler->tail = newElement;
     listHandler->listLength++;
     pthread_mutex_unlock(&listHandler->lock);
     return ERR_OK;
@@ -191,42 +194,19 @@ err_t list_add_id(list_handler_t* listHandler, const void* content, const uint64
  *                    ERR_NULL_POINTER if no element is found.
  */
 err_t list_pop(list_handler_t* listHandler, void* content) {
-    chained_list_t* p;
 
     if (listHandler == NULL || content == NULL || listHandler->tail == NULL) {
         return ERR_PARAM;
     }
     // Lock
     pthread_mutex_lock(&listHandler->lock);
-
-    if (listHandler->listMode == LIST_MODE_FIFO) {
-        p = listHandler->head;
-    } else {
-        p = listHandler->tail;
-    }
-    if (p != NULL) {
-        if (p->content != NULL) {
-            memcpy(content, p->content, listHandler->contentLen);
-            free(p->content);
-        }
-        if (listHandler->listMode == LIST_MODE_FIFO && p->next != NULL) {
-            p->next->prev = NULL;
-            listHandler->head = p->next;
-        } else if (listHandler->listMode == LIST_MODE_LIFO && p->prev != NULL) {
-            p->prev->next = NULL;
-            listHandler->tail = p->prev;
-        } else {
-            // On supprimait le seul élément
-            listHandler->tail = NULL;
-            listHandler->head = NULL;
-        }
-        free(p);
-        listHandler->listLength--;
+    err_t ret = list_get_element_(listHandler,listHandler->tail,content,true);
+    if (ret != ERR_OK) {
         pthread_mutex_unlock(&listHandler->lock);
-        return ERR_OK;
+        return ret;
     }
     pthread_mutex_unlock(&listHandler->lock);
-    return ERR_NULL_POINTER;
+    return ERR_OK;
 }
 
 /**
@@ -237,14 +217,18 @@ err_t list_pop(list_handler_t* listHandler, void* content) {
  * @param delete
  * @return
  */
-err_t list_get_element(list_handler_t* listHandler, chained_list_t* element, void* content, bool delete) {
-    if (listHandler == NULL || content == NULL || element == NULL) {
+err_t list_get_element_(list_handler_t* listHandler, chained_list_t* element, void* content, bool delete) {
+    if (listHandler == NULL || content == NULL) {
         return ERR_PARAM;
     }
-    memcpy(content, element->content, listHandler->contentLen);
 
+    if (element == NULL) {
+        return ERR_NOT_FOUND;
+    }
+
+    memcpy(content, element->content, listHandler->contentLen);
     if (delete) {
-        list_delete_element(listHandler, element);
+        return list_delete_element(listHandler, element);
     }
     return ERR_OK;
 }
@@ -346,7 +330,7 @@ err_t list_insert_element(list_handler_t* listHandler, bool before, chained_list
  * @param listHandler List handler.
  * @param element     Element to delete.
  */
-void list_delete_element(list_handler_t* listHandler, chained_list_t* element) {
+err_t list_delete_element(list_handler_t* listHandler, chained_list_t* element) {
     if (listHandler->tail != NULL && element != NULL) {
         chained_list_t* prev = element->prev;
         chained_list_t* next = element->next;
@@ -354,23 +338,36 @@ void list_delete_element(list_handler_t* listHandler, chained_list_t* element) {
         if (prev == NULL && next != NULL) {
             next->prev = NULL;
             listHandler->head = next;
+            if (listHandler->current == element) {
+                listHandler->current = next;
+            }
             // Cas du dernier
         } else if (prev != NULL && next == NULL) {
             prev->next = NULL;
             listHandler->tail = prev;
+            if (listHandler->current == element) {
+                listHandler->current = prev;
+            }
             // cas au milieux
         } else if (prev != NULL) {
             prev->next = next;
             next->prev = prev;
+            if (listHandler->current == element) {
+                listHandler->current = prev;
+            }
         } else {
             // Element seul
             listHandler->tail = NULL;
             listHandler->head = NULL;
+            listHandler->current = NULL;
         }
         listHandler->listLength--;
         free(element->content);
         free(element);
+    } else {
+        return ERR_NULL_POINTER;
     }
+    return ERR_OK;
 }
 
 /**
@@ -536,6 +533,56 @@ err_t list_get_element_by_id(list_handler_t* listHandler, const uint64_t id, voi
 
     pthread_mutex_unlock(&listHandler->lock);
     return ERR_NOT_FOUND;
+}
+
+/**
+ *
+ * @param listHandler
+ * @param move
+ * @param content
+ * @return
+ */
+err_t list_get_element(list_handler_t* listHandler, list_move_e move, void* content)
+{
+    if (listHandler == NULL || listHandler->head == NULL) {
+        return ERR_NULL_POINTER;
+    }
+
+    err_t ret = ERR_OK;
+    pthread_mutex_lock(&listHandler->lock);
+    switch (move) {
+    case FIRST_ELEM:
+        ret = list_get_element_(listHandler, listHandler->head, content, false);
+        break;
+    case LAST_ELEM:
+        ret = list_get_element_(listHandler, listHandler->tail, content, false);
+        break;
+    case CURRENT_ELEM:
+        ret = list_get_element_(listHandler, listHandler->current, content, true);
+        break;
+    case NEXT_ELEM:
+        ret = list_get_element_(listHandler, listHandler->current->next, content, false);
+        if (ret == ERR_OK) {
+            listHandler->current = listHandler->current->next;
+        } else if (ret == ERR_NOT_FOUND && listHandler->listMode == LIST_MODE_CIRCULAR) {
+            listHandler->current = listHandler->head;
+            ret = list_get_element_(listHandler, listHandler->current, content, false);
+        }
+        break;
+    case PREV_ELEM:
+        ret = list_get_element_(listHandler, listHandler->current->prev, content, false);
+        if (ret == ERR_OK) {
+            listHandler->current = listHandler->current->prev;
+        } else if (ret == ERR_NOT_FOUND && listHandler->listMode == LIST_MODE_CIRCULAR) {
+            listHandler->current = listHandler->tail;
+            ret = list_get_element_(listHandler, listHandler->current, content, false);
+        }
+        break;
+    default:
+        ret = ERR_NOT_FOUND;
+    }
+    pthread_mutex_lock(&listHandler->lock);
+    return ret;
 }
 
 /**
