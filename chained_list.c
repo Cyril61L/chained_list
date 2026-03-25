@@ -15,13 +15,13 @@
 
 #define ID_UNDEFINED 0xFFFFFFFFFFFFFFFF
 
-chained_list_t* list_get_first_element(list_handler_t listHandler);
-chained_list_t* list_get_last_element(list_handler_t listHandler);
-err_t list_insert_element(list_handler_t listHandler, bool before, chained_list_t* place, const void* content, const uint64_t* id);
-void list_delete_element(list_handler_t listHandler, chained_list_t* element);
-err_t list_swap_element(list_handler_t listHandler, chained_list_t* a, chained_list_t* b);
-chained_list_t* list_get_element_by_id_(list_handler_t listHandler, uint64_t id);
-chained_list_t* list_get_element_by_index_(list_handler_t listHandler, uint16_t index);
+chained_list_t* list_get_first_element(list_handler_t* listHandler);
+chained_list_t* list_get_last_element(list_handler_t* listHandler);
+err_t list_insert_element(list_handler_t* listHandler, bool before, chained_list_t* place, const void* content, const uint64_t* id);
+void list_delete_element(list_handler_t* listHandler, chained_list_t* element);
+err_t list_swap_element(list_handler_t* listHandler, chained_list_t* a, chained_list_t* b);
+chained_list_t* list_get_element_by_id_(list_handler_t* listHandler, uint64_t id);
+chained_list_t* list_get_element_by_index_(list_handler_t* listHandler, uint16_t index);
 
 /**
  * @brief Initialize a new linked list handler.
@@ -36,16 +36,15 @@ err_t list_init(list_handler_t* listHandler, const char* name, size_t len, list_
     if (len > CONTENT_MAX_SIZE || len <= 0) {
         return ERR_PARAM;
     }
-    *listHandler = malloc(sizeof(struct list_handler));
-    if (*listHandler) {
-        strncpy((char*)(*listHandler)->name, name, LIST_NAME_SIZE);
-        (*listHandler)->head = NULL;
-        (*listHandler)->tail = NULL;
-        (*listHandler)->listMode = mode;
-        (*listHandler)->contentLen = len;
-        (*listHandler)->listLength = 0;
-    }
-    pthread_mutex_init(&(*listHandler)->lock, NULL);
+    
+    strncpy((char*)listHandler->name, name, LIST_NAME_SIZE);
+    listHandler->head = NULL;
+    listHandler->tail = NULL;
+    listHandler->listMode = mode;
+    listHandler->contentLen = len;
+    listHandler->listLength = 0;
+
+    pthread_mutex_init(&listHandler->lock, NULL);
     return ERR_OK;
 }
 
@@ -55,7 +54,7 @@ err_t list_init(list_handler_t* listHandler, const char* name, size_t len, list_
  * @param listHandler Pointer to the list handler to free.
  * @return            ERR_OK if success, ERR_NULL_POINTER if pointer is invalid.
  */
-err_t list_free(list_handler_t listHandler) {
+err_t list_free(list_handler_t* listHandler) {
 
     if (listHandler != NULL) {
         chained_list_t* elem;
@@ -66,7 +65,6 @@ err_t list_free(list_handler_t listHandler) {
         } while (elem != NULL);
         pthread_mutex_unlock(&listHandler->lock);
         pthread_mutex_destroy(&listHandler->lock);
-        free(listHandler);
         return ERR_OK;
     }
     return ERR_NULL_POINTER;
@@ -78,7 +76,7 @@ err_t list_free(list_handler_t listHandler) {
  * @param listHandler List handler.
  * @return            Pointer to the first element, NULL if list is empty.
  */
-chained_list_t* list_get_first_element(list_handler_t listHandler) {
+chained_list_t* list_get_first_element(list_handler_t* listHandler) {
     if (listHandler->tail != NULL) {
         chained_list_t* p = listHandler->tail;
         while (p->prev != NULL) {
@@ -95,7 +93,7 @@ chained_list_t* list_get_first_element(list_handler_t listHandler) {
  * @param listHandler List handler.
  * @return            Pointer to the last element, NULL if list is empty.
  */
-chained_list_t* list_get_last_element(list_handler_t listHandler) {
+chained_list_t* list_get_last_element(list_handler_t* listHandler) {
     if (listHandler->head != NULL) {
         chained_list_t* p = listHandler->head;
         while (p->next != NULL) {
@@ -116,7 +114,7 @@ chained_list_t* list_get_last_element(list_handler_t listHandler) {
  *                    ERR_LIST_FULL if list is full,
  *                    ERR_MALLOC_FAILED if memory allocation fails.
  */
-err_t list_add(list_handler_t listHandler, const void* content) {
+err_t list_add(list_handler_t* listHandler, const void* content) {
     return list_add_id(listHandler, content, NULL);
 }
 
@@ -131,7 +129,7 @@ err_t list_add(list_handler_t listHandler, const void* content) {
  *                    ERR_LIST_FULL if list is full,
  *                    ERR_MALLOC_FAILED if memory allocation fails.
  */
-err_t list_add_id(list_handler_t listHandler, const void* content, const uint64_t* id) {
+err_t list_add_id(list_handler_t* listHandler, const void* content, const uint64_t* id) {
     if (listHandler == NULL || content == NULL) {
         return ERR_PARAM;
     }
@@ -192,7 +190,7 @@ err_t list_add_id(list_handler_t listHandler, const void* content, const uint64_
  *                    ERR_PARAM if invalid arguments or empty list,
  *                    ERR_NULL_POINTER if no element is found.
  */
-err_t list_pop(list_handler_t listHandler, void* content) {
+err_t list_pop(list_handler_t* listHandler, void* content) {
     chained_list_t* p;
 
     if (listHandler == NULL || content == NULL || listHandler->tail == NULL) {
@@ -239,7 +237,7 @@ err_t list_pop(list_handler_t listHandler, void* content) {
  * @param delete
  * @return
  */
-err_t list_get_element(list_handler_t listHandler, chained_list_t* element, void* content, bool delete) {
+err_t list_get_element(list_handler_t* listHandler, chained_list_t* element, void* content, bool delete) {
     if (listHandler == NULL || content == NULL || element == NULL) {
         return ERR_PARAM;
     }
@@ -258,7 +256,7 @@ err_t list_get_element(list_handler_t listHandler, chained_list_t* element, void
  * @param listHandler List handler.
  * @return            Number of elements in the list (0 if empty).
  */
-uint16_t list_get_size(list_handler_t listHandler) {
+uint16_t list_get_size(list_handler_t* listHandler) {
     uint16_t n = 0;
 
     pthread_mutex_lock(&listHandler->lock);
@@ -288,7 +286,7 @@ uint16_t list_get_size(list_handler_t listHandler) {
  *                    ERR_NULL_POINTER if invalid pointers,
  *                    ERR_MALLOC_FAILED if memory allocation fails.
  */
-err_t list_insert_element(list_handler_t listHandler, bool before, chained_list_t* place, const void* content, const uint64_t* id) {
+err_t list_insert_element(list_handler_t* listHandler, bool before, chained_list_t* place, const void* content, const uint64_t* id) {
 
     if (listHandler != NULL && place != NULL) {
         if (listHandler->listLength == LIST_MAX_LEN) {
@@ -348,7 +346,7 @@ err_t list_insert_element(list_handler_t listHandler, bool before, chained_list_
  * @param listHandler List handler.
  * @param element     Element to delete.
  */
-void list_delete_element(list_handler_t listHandler, chained_list_t* element) {
+void list_delete_element(list_handler_t* listHandler, chained_list_t* element) {
     if (listHandler->tail != NULL && element != NULL) {
         chained_list_t* prev = element->prev;
         chained_list_t* next = element->next;
@@ -383,7 +381,7 @@ void list_delete_element(list_handler_t listHandler, chained_list_t* element) {
  * @param b           Second element.
  * @return            ERR_OK if success, ERR_PARAM if invalid parameters.
  */
-err_t list_swap_element(list_handler_t listHandler, chained_list_t* a, chained_list_t* b) {
+err_t list_swap_element(list_handler_t* listHandler, chained_list_t* a, chained_list_t* b) {
     if (!a || !b || !listHandler) {
         return ERR_PARAM;
     }
@@ -453,7 +451,7 @@ err_t list_swap_element(list_handler_t listHandler, chained_list_t* a, chained_l
     return ERR_OK;
 }
 
-chained_list_t* list_get_element_by_index_(list_handler_t listHandler, uint16_t index) {
+chained_list_t* list_get_element_by_index_(list_handler_t* listHandler, uint16_t index) {
     if (listHandler->head == NULL) {
         return NULL;
     }
@@ -476,7 +474,7 @@ chained_list_t* list_get_element_by_index_(list_handler_t listHandler, uint16_t 
  * @return            Pointer to the element,
  *                    NULL if out of bounds or invalid handler.
  */
-err_t list_get_element_by_index(list_handler_t listHandler, uint16_t index, void* content, bool delete) {
+err_t list_get_element_by_index(list_handler_t* listHandler, uint16_t index, void* content, bool delete) {
     pthread_mutex_lock(&listHandler->lock);
     if (!listHandler || !listHandler->head || index > listHandler->listLength || content == NULL) {
         pthread_mutex_unlock(&listHandler->lock);
@@ -497,7 +495,7 @@ err_t list_get_element_by_index(list_handler_t listHandler, uint16_t index, void
     return ERR_NOT_FOUND;
 }
 
-chained_list_t* list_get_element_by_id_(list_handler_t listHandler, uint64_t id) {
+chained_list_t* list_get_element_by_id_(list_handler_t* listHandler, uint64_t id) {
     chained_list_t* p = listHandler->head;
     while (p != NULL) {
         if (p->id == id) {
@@ -518,7 +516,7 @@ chained_list_t* list_get_element_by_id_(list_handler_t listHandler, uint64_t id)
  * @return            Pointer to the element,
  *                    NULL if out of bounds or invalid handler.
  */
-err_t list_get_element_by_id(list_handler_t listHandler, const uint64_t id, void* content, bool delete) {
+err_t list_get_element_by_id(list_handler_t* listHandler, const uint64_t id, void* content, bool delete) {
 
     pthread_mutex_lock(&listHandler->lock);
     if (!listHandler || !listHandler->head || content == NULL || id == ID_UNDEFINED) {
@@ -548,7 +546,7 @@ err_t list_get_element_by_id(list_handler_t listHandler, const uint64_t id, void
  * @param result          Output boolean set to true if element is found.
  * @return                ERR_OK if success, ERR_NULL_POINTER if invalid pointer.
  */
-err_t list_search_element(list_handler_t listHandler, const chained_list_t* searchedElement, bool* result) {
+err_t list_search_element(list_handler_t* listHandler, const chained_list_t* searchedElement, bool* result) {
     *result = false;
     if (listHandler->tail != NULL) {
         chained_list_t* p = list_get_first_element(listHandler);

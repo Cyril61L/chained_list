@@ -59,17 +59,17 @@ typedef struct list_handler {
     chained_list_t* head;
     chained_list_t* tail;
     pthread_mutex_t lock;
-}* list_handler_t;
+} list_handler_t;
 
 err_t list_init(list_handler_t* listHandler, const char* name, size_t len, list_mode_t mode);
-err_t list_free(list_handler_t listHandler);
-uint16_t list_get_size(list_handler_t listHandler);
+err_t list_free(list_handler_t* listHandler);
+uint16_t list_get_size(list_handler_t* listHandler);
 
-err_t list_add(list_handler_t listHandler, const void* content);
-err_t list_add_id(list_handler_t listHandler, const void* content, const uint64_t* id);
-err_t list_pop(list_handler_t listHandler, void* content);
+err_t list_add(list_handler_t* listHandler, const void* content);
+err_t list_add_id(list_handler_t* listHandler, const void* content, const uint64_t* id);
+err_t list_pop(list_handler_t* listHandler, void* content);
 
-err_t list_get_element_by_index(list_handler_t listHandler, uint16_t index, void* content, bool delete);
-err_t list_get_element_by_id(list_handler_t listHandler, uint64_t id, void* content, bool delete);
+err_t list_get_element_by_index(list_handler_t* listHandler, uint16_t index, void* content, bool delete);
+err_t list_get_element_by_id(list_handler_t* listHandler, uint64_t id, void* content, bool delete);
 
 #endif //CHAINED_LIST_H
