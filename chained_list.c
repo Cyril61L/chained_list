@@ -145,6 +145,7 @@ err_t list_add_id(list_handler_t* listHandler, const void* content, const uint64
 
     // Allocate new node and content
     chained_list_t* newElement = malloc(sizeof(chained_list_t));
+    memset(newElement,0x00,sizeof(chained_list_t));
     if (newElement == NULL) {
         pthread_mutex_unlock(&listHandler->lock);
         return ERR_MALLOC_FAILED;
@@ -162,10 +163,12 @@ err_t list_add_id(list_handler_t* listHandler, const void* content, const uint64
     if (listHandler->tail && listHandler->head) {
         if (listHandler->listMode == LIST_MODE_FIFO) {
             newElement->next = listHandler->head;
+            newElement->prev = NULL;
             listHandler->head->prev = newElement;
             listHandler->head = newElement;
         } else {
             newElement->prev = listHandler->tail;
+            newElement->next = NULL;
             listHandler->tail->next = newElement;
             listHandler->tail = newElement;
         }
@@ -540,7 +543,7 @@ err_t list_get_element_by_id(list_handler_t* listHandler, const uint64_t id, voi
  * @param content
  * @return
  */
-err_t list_get_element(list_handler_t* listHandler, list_move_e move, void* content)
+err_t list_browse(list_handler_t* listHandler, list_move_e move, void* content)
 {
     if (listHandler == NULL || listHandler->head == NULL) {
         return ERR_NULL_POINTER;
@@ -579,7 +582,7 @@ err_t list_get_element(list_handler_t* listHandler, list_move_e move, void* cont
     default:
         ret = ERR_NOT_FOUND;
     }
-    pthread_mutex_lock(&listHandler->lock);
+    pthread_mutex_unlock(&listHandler->lock);
     return ret;
 }
 

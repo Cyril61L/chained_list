@@ -76,7 +76,8 @@ err_t list_add(list_handler_t* listHandler, const void* content);
 err_t list_add_id(list_handler_t* listHandler, const void* content, uint64_t id);
 err_t list_pop(list_handler_t* listHandler, void* content);
 
-err_t list_get_element(list_handler_t* listHandler, list_move_e move, void* content);
+err_t list_browse(list_handler_t* listHandler, list_move_e move, void* content);
+err_t list_sort_by_id(list_handler_t* listHandler, list_move_e move, void* content);
 err_t list_get_element_by_index(list_handler_t* listHandler, uint16_t index, void* content, bool delete);
 err_t list_get_element_by_id(list_handler_t* listHandler, uint64_t id, void* content, bool delete);
 
