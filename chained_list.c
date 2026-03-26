@@ -432,19 +432,19 @@ err_t list_swap_element(list_handler_t* listHandler, chained_list_t* a, chained_
         a->prev = tmp_prev_b;
         b->next = tmp_next_a;
         b->prev = tmp_prev_a;
-        // On replace head et tail
-        if (a->next == NULL) {
-            listHandler->tail = a;
-        }
-        if (b->next == NULL) {
-            listHandler->tail = b;
-        }
-        if (a->prev == NULL) {
-            listHandler->head = a;
-        }
-        if (b->prev == NULL) {
-            listHandler->head = b;
-        }
+    }
+    // On replace head et tail
+    if (a->next == NULL) {
+        listHandler->tail = a;
+    }
+    if (b->next == NULL) {
+        listHandler->tail = b;
+    }
+    if (a->prev == NULL) {
+        listHandler->head = a;
+    }
+    if (b->prev == NULL) {
+        listHandler->head = b;
     }
     return ERR_OK;
 }
@@ -608,4 +608,208 @@ err_t list_search_element(list_handler_t* listHandler, const chained_list_t* sea
         return ERR_OK;
     }
     return ERR_NULL_POINTER;
+}
+
+void split(chained_list_t * source, chained_list_t** front, chained_list_t** back) {
+    chained_list_t* slow = source;
+    chained_list_t* fast = source->next;
+
+    while (fast) {
+        fast = fast->next;
+        if (fast) {
+            slow = slow->next;
+            fast = fast->next;
+        }
+    }
+
+    *front = source;
+    *back = slow->next;
+    slow->next = NULL;
+}
+
+chained_list_t* fusion(chained_list_t* a, chained_list_t* b) {
+    if (!a) return b;
+    if (!b) return a;
+
+    chained_list_t* result = NULL;
+    if (a->id <= b->id) {
+        result = a;
+        result->next = fusion(a->next, b);
+        if (result->next) result->next->prev = result;  // 🔥 important
+    } else {
+        result = b;
+        result->next = fusion(a, b->next);
+        if (result->next) result->next->prev = result;  // 🔥 important
+    }
+    result->prev = NULL;  // sécurité
+    return result;
+}
+
+chained_list_t* mergeSort(chained_list_t* head) {
+    if (!head || !head->next) return head;
+
+    chained_list_t *a, *b;
+    split(head, &a, &b);
+
+    a = mergeSort(a);
+    b = mergeSort(b);
+
+    return fusion(a, b);
+}
+
+/**
+ * @brief Sort by id using merge sort method
+ * @param listHandler
+ * @return
+ */
+err_t list_sort_by_id(list_handler_t* listHandler)
+{
+    pthread_mutex_lock(&listHandler->lock);
+    listHandler->head = mergeSort(listHandler->head);
+    listHandler->tail = list_get_last_element(listHandler);
+    pthread_mutex_unlock(&listHandler->lock);
+    return ERR_OK;
+}
+
+/**
+ * @brief
+ * @param list
+ */
+void list_slow_sort(list_handler_t *list) {
+    bool swap = false;
+    chained_list_t *next;
+    chained_list_t *p = list->head;
+    if(p != NULL && p->next != NULL) {
+        while (p->next != NULL) {
+            //printf("Place : %u\n",p->x);
+            // Step 1 :
+            next = p->next;
+            while(p->id > next->id) {
+                swap = true;
+                list_swap_element(list,p,next);
+                //list_print(list);
+                next = p->next;
+                if(next == NULL)
+                    break;
+            }
+            if(swap == true) {
+                p = list->head;
+                swap = false;
+            } else {
+                p = p->next;
+            }
+        }
+    }
+}
+
+
+/**
+ * Sort using selection method
+ * @param list
+ */
+void list_insertion_sort(list_handler_t *list) {
+    chained_list_t *sorted_end = list->head;
+
+    while (sorted_end->next) {
+        chained_list_t *current = sorted_end->next;
+
+        // Cherche la position en remontant à rebours — O(k) au lieu de repartir du début
+        chained_list_t *pos = sorted_end;
+        while (pos->prev != NULL && pos->id > current->id) {
+            pos = pos->prev;
+        }
+
+        // current est déjà à la bonne place
+        if (pos == sorted_end && pos->id <= current->id) {
+            sorted_end = sorted_end->next;
+            continue;
+        }
+
+        // Détache current
+        sorted_end->next = current->next;
+        if (current->next) current->next->prev = sorted_end;
+
+        if (pos->id > current->id) {
+            // Insertion en tête
+            current->next = pos;
+            current->prev = NULL;
+            pos->prev = current;
+            list->head = current;
+        } else {
+            // Insertion après pos
+            current->next = pos->next;
+            current->prev = pos;
+            if (pos->next) pos->next->prev = current;
+            pos->next = current;
+        }
+        // sorted_end ne bouge pas : on réinsère avant lui
+    }
+    list->tail = sorted_end;
+}
+
+
+chained_list_t *get_higher_element(list_handler_t *list) {
+    if(list != NULL) {
+        chained_list_t *p = list->head;
+        chained_list_t *higher = p;
+        while(p != NULL) {
+            if(p->id > higher->id)
+                higher = p;
+            if(p->next == NULL)
+                break;
+            p = p->next;
+        }
+        return higher;
+    }
+    return NULL;
+}
+
+/**
+ * @brief Sort using selection method
+ * @param list
+ */
+void list_selection_sort(list_handler_t *list) {
+    chained_list_t *higher,*tmp = NULL;
+
+    for(uint32_t i=0; i<list->listLength-1;i++) {
+        // Recherche l'element avec la plus grande valeur
+        // [15]---[2]---[8]---[12] => [15]
+        higher = get_higher_element(list);
+        // Place le plus haut element trouvé en dernier
+        // [12]---[2]---[8]---[15]
+        list_swap_element(list, higher, list->tail);
+        // On décroche le dernier element pour ne pas le compter dans la prochaine recherche de la plus haute valeur
+        // [12]---[2]---[8]-x-[15]
+        list->tail = higher->prev;
+        higher->prev->next = NULL;
+        if(tmp != NULL)
+            // On raccroche la suite à partir du second tour
+                // [8]---[2]-x-[12]-x-[15] => [8]---[2]-x-[12]---[15]
+                    higher->next = tmp;
+        tmp = higher;
+        //show_list(list);
+    }
+    chained_list_t *first = list->head;
+    // On raccroche le reste
+    // [2]-x-[8]---[12]---[15] => [2]---[8]---[12]---[15]
+    first->next = higher;
+    list->tail = list_get_last_element(list);
+}
+
+err_t list_print(list_handler_t* listHandler)
+{
+    if (listHandler == NULL && listHandler->head == NULL)
+        return ERR_NULL_POINTER;
+
+    chained_list_t *p = listHandler->head;
+    if(p != NULL) {
+        printf("Show list ");
+        while(p != NULL) {
+            printf("->[%u]<-",p->id);
+            p = p->next;
+        }
+    } else {
+    }
+    printf("\n");
+    return ERR_OK;
 }

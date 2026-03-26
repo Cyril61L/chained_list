@@ -29,7 +29,7 @@
 #include <glob.h>
 #include <pthread.h>
 
-#define LIST_MAX_LEN     100
+#define LIST_MAX_LEN     10000
 #define CONTENT_MAX_SIZE 512
 
 typedef enum { LIST_MODE_FIFO, LIST_MODE_LIFO , LIST_MODE_CIRCULAR} list_mode_e;
@@ -60,7 +60,7 @@ typedef struct elem {
 
 typedef struct list_handler {
     size_t contentLen;
-    uint8_t listLength;
+    uint32_t listLength;
     list_mode_e listMode;
     chained_list_t* head;
     chained_list_t* current;
@@ -71,13 +71,17 @@ typedef struct list_handler {
 err_t list_init(list_handler_t* listHandler, size_t len, list_mode_e mode);
 err_t list_free(list_handler_t* listHandler);
 uint16_t list_get_size(list_handler_t* listHandler);
+err_t list_print(list_handler_t* listHandler);
 
 err_t list_add(list_handler_t* listHandler, const void* content);
 err_t list_add_id(list_handler_t* listHandler, const void* content, uint64_t id);
 err_t list_pop(list_handler_t* listHandler, void* content);
 
 err_t list_browse(list_handler_t* listHandler, list_move_e move, void* content);
-err_t list_sort_by_id(list_handler_t* listHandler, list_move_e move, void* content);
+err_t list_sort_by_id(list_handler_t* listHandler);
+void sort2(list_handler_t *list);
+void sort(list_handler_t *list);
+void insertion_sort(list_handler_t *list);
 err_t list_get_element_by_index(list_handler_t* listHandler, uint16_t index, void* content, bool delete);
 err_t list_get_element_by_id(list_handler_t* listHandler, uint64_t id, void* content, bool delete);
 
